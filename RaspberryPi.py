@@ -3,27 +3,24 @@ import pynmea2
 import json
 import pyrebase
 import socket
-import os
+from datetime import datetime, timedelta
 
-# Initialize Firebase with your project credenti
+# Initialize Firebase with your project credentials
 config = {
-  "apiKey": "AIzaSyB4BUJG2t94v1ho9m8h-kDIlxvwE5Wvo2g",
-  "authDomain": "atdxt3.firebaseapp.com",
-  "databaseURL": "https://atdxt3-default-rtdb.firebaseio.com",
-  "projectId": "atdxt3",
-  "storageBucket": "atdxt3.appspot.com",
-  "messagingSenderId": "721302049985",
-  "appId": "1:721302049985:web:dfd2e914f6d3a62900b040"
+     "apiKey": "AIzaSyB4BUJG2t94v1ho9m8h-kDIlxvwE5Wvo2g",
+      "authDomain": "atdxt3.firebaseapp.com",
+      "databaseURL": "https://atdxt3-default-rtdb.firebaseio.com",
+      "projectId": "atdxt3",
+      "storageBucket": "atdxt3.appspot.com",
+      "messagingSenderId": "721302049985",
+      "appId": "1:721302049985:web:dfd2e914f6d3a62900b040"
+    # Your Firebase configuration
 }
 
-
 firebase = pyrebase.initialize_app(config)
-db = firebase.database()
 storage = firebase.storage()
 
-
-import socket
-
+# Function to check internet connection
 def check_internet_connection():
     try:
         socket.create_connection(("www.google.com", 80))
@@ -32,10 +29,10 @@ def check_internet_connection():
         pass
     return False
 
-
+# Function to parse GPRMC data
 def parse_gprmc(data_str):
     msg = pynmea2.parse(data_str)
-    if isinstance(msg, pynmea2.types.talker.RMC) and (msg.latitude!=0 and msg.longitude!=0):
+    if isinstance(msg, pynmea2.types.talker.RMC) and (msg.latitude != 0 and msg.longitude != 0):
         latitude = msg.latitude
         longitude = msg.longitude
         speed = msg.spd_over_grnd
@@ -56,33 +53,50 @@ def parse_gprmc(data_str):
         return location_data, latitude, longitude
     else:
         return None, None, None
+
+# Function to get the current date as a string
+def get_current_date():
+    return datetime.now().strftime("%Y%m%d")
+
+# Function to get the current time as a string
+def get_current_time():
+    return datetime.now().strftime("%H:%M:%S")
+
+# Function to initialize or retrieve the GeoJSON file for the day
+def get_geojson_file():
+    current_date = get_current_date()
+    file_name = f"data_{current_date}.json"
     
-def uploadToFirebase():
-    # Upload GeoJSON file to Firebase Storage
-    storage.child("data.json").put("location_data.geojson")
-    print("GeoJSON file uploaded to Firebase Storage")
+    try:
+        # Try to download the existing GeoJSON file
+        storage.child(file_name).download(file_name)
+        print(f"GeoJSON file {file_name} downloaded from Firebase Storage.")
+    except:
+        # If the file doesn't exist, create an empty one
+        with open(file_name, "w") as geojson_file:
+            geojson_file.write('{"type": "FeatureCollection", "features": []}')
+        print(f"GeoJSON file {file_name} created.")
+    
+    return file_name
 
+# Function to upload GeoJSON file to Firebase Storage
+def upload_to_firebase(file_name):
+    storage.child(file_name).put(file_name)
+    print(f"GeoJSON file {file_name} uploaded to Firebase Storage")
 
-def download_from_firebase():
-    # Download the existing file from Firebase Storage
-    storage.child("data.json").download("location_data.geojson")
-
-def append_data_to_file(data):
-    # Append data to the file
-    with open("location_data.geojson", "a") as geojson_file:
+# Function to append data to the GeoJSON file
+def append_data_to_file(data, file_name):
+    with open(file_name, "a") as geojson_file:
         json.dump(data, geojson_file)
         geojson_file.write('\n')
 
-def upload_to_firebase():
-    # Re-upload the modified file back to Firebase Storage
-    storage.child("data.json").put("location_data.geojson")
-
-                            
-
+# Main function
 def main():
     ser = serial.Serial('/dev/serial0', baudrate=9600, timeout=1.0)
-    ct=0
-    print("Waiting for GPS connection...")
+    ct = 0
+    geojson_file_name = get_geojson_file()
+
+    print(f"Waiting for GPS connection. Writing to file: {geojson_file_name}")
 
     try:
         while True:
@@ -91,40 +105,27 @@ def main():
                 if data.startswith('$GPRMC'):
                     location_data, latitude, longitude = parse_gprmc(data)
                     if location_data:
-                        with open("location_data.geojson", "a") as geojson_file:
-                            json.dump(location_data, geojson_file)
-                            geojson_file.write('\n')
-                            print("Location data saved as location_data.geojson")
-                            print(f"Latitude: {latitude}, Longitude: {longitude}")
-                            print(ct)
+                        append_data_to_file(location_data, geojson_file_name)
+                        print("Location data saved in GeoJSON file")
+                        print(f"Latitude: {latitude}, Longitude: {longitude}")
+                        print(ct)
 
                         if ct == 10:
                             if check_internet_connection():
-                                download_from_firebase()  # Download the file
-                                append_data_to_file(location_data)  # Append data
-                                upload_to_firebase()  # Upload the modified file
-                                file_path = "location_data.geojson"
-                                ct = 0
-                                if os.path.exists(file_path):
-                                    os.remove(file_path)
-                                    print(f"{file_path} has been erased.")
-                                else:
-                                    print(f"{file_path} does not exist.")    
+                                upload_to_firebase(geojson_file_name)
+                                print(f"{geojson_file_name} has been uploaded.")
+                                # Remove the local file after uploading
+                                os.remove(geojson_file_name)
+                                print(f"{geojson_file_name} has been erased.")
+                                # Get a new GeoJSON file for the next day
+                                geojson_file_name = get_geojson_file()
+                                ct=(ct + 1) % 11
                             else:
-                                
-                                ct=(ct+1)%11
-                                                           
+                                ct = (ct + 1) % 11
+
                         else:
-                            ct = (ct + 1) % 11                                  
-                                
-                           
-                            # # Send latitude and longitude to Firebase Realtime Database
-                            # data_to_update = {
-                            #     'latitude': latitude,
-                            #     'longitude': longitude
-                            # }
-                            # result = db.update(data_to_update)
-                            # print(f"Data uploaded to Firebase Database: {result}")
+                            ct = (ct + 1) % 11
+
             except KeyboardInterrupt:
                 ser.close()
                 break
