@@ -73,9 +73,8 @@
     // Initialize Firebase
     const firebaseApp = initializeApp(firebaseConfig);
 
-    // Reference to your GeoJSON file in Firebase Storage
-    const storage = getStorage(firebaseApp);
-    const geojsonRef = ref(storage, 'gs://atdxt3.appspot.com/data1.json');
+    // Global variable to store the end point marker
+    let endPointMarker;
 
     // Function to initialize the map
     function initMap() {
@@ -89,7 +88,7 @@
 
       // Reference to your GeoJSON file in Firebase Storage
       const storage = getStorage(firebaseApp);
-      const geojsonRef = ref(storage, 'gs://atdxt3.appspot.com/data1.json');
+      const geojsonRef = ref(storage, 'gs://atdxt3.appspot.com/data3.json');
 
       // Fetch the GeoJSON data using the URL
       getDownloadURL(geojsonRef)
@@ -129,11 +128,16 @@
 
               // Plot LineString if there are any coordinates
               if (lineStringCoordinates.length > 0) {
-                // Add markers at the starting and last points of the LineString
-                L.marker(lineStringCoordinates[0]).addTo(map).bindPopup('Starting Point');
-               // L.marker(lineStringCoordinates[lineStringCoordinates.length - 1]).addTo(map).bindPopup('Last Point');
+                // Update the end point marker whenever a new point is added
+                if (endPointMarker) {
+                  map.removeLayer(endPointMarker);
+                }
 
-                var polyline = L.polyline(lineStringCoordinates, { color: 'blue' }).addTo(map);
+                endPointMarker = L.marker(lineStringCoordinates[lineStringCoordinates.length - 1])
+                  .addTo(map)
+                  .bindPopup('Current End Point');
+
+                var polyline = L.polyline(lineStringCoordinates, { color: 'blue' }).addTo(map).bindPopup('Current End Point');
                 map.fitBounds(polyline.getBounds());
               }
 
