@@ -192,11 +192,13 @@ def main():
             if is_sim_card_present(ser):
                 if initialize_gsm(ser):
                     if check_network_status(ser):
-                        receive = receive_sms(ser, default_phone_number)
+                        receive = receive_sms(ser,"")
+
+                        if receive:
+                            sender_number = extract_sender_number(receive)
+                            received_upper = receive.upper()
                        
-                        sender_number = extract_phone_number(receive)
                         
-                        received_upper=receive.upper()
 
                         if(received_upper=="HI"):
                             msg="enter the password"
