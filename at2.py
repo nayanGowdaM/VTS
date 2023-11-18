@@ -109,19 +109,39 @@ def receive_sms(ser, from_phone_number):
         ser.write(f'AT+CMGL="REC UNREAD",1\r\n'.encode())  # 1 for reading SMS index 1
         time.sleep(1)
         response = ser.read(ser.in_waiting).decode()
+        
         if "+CMGL" in response:
             print("New unread messages:")
             print(response)
 
-            return response
-            # You can extract and process the messages as needed
-           
+            # Split the response into individual messages
+            messages = response.split("+CMGL")[1:]
+
+            # Extract information from each message
+            message_info_list = []
+            for msg in messages:
+                sender_number = extract_sender_number(msg)
+                timestamp_match = re.search(r'Date: (\d{2}/\d{2}/\d{2}, \d{2}:\d{2}:\d{2})', msg)
+                
+                if sender_number and timestamp_match:
+                    timestamp_str = timestamp_match.group(1)
+                    timestamp = time.strptime(timestamp_str, "%y/%m/%d, %H:%M:%S")
+                    message_info_list.append((sender_number, timestamp, msg))
+
+            # Sort messages by timestamp in descending order
+            message_info_list.sort(key=lambda x: x[1], reverse=True)
+
+            # Return the most recent message
+            if message_info_list:
+                return message_info_list[0][2]
+
         else:
             print("No new unread messages.")
         return None
     except Exception as e:
         print(f"Error receiving SMS: {e}")
         return None
+
 def parse_gps_data(data_str):
     try:
         msg = pynmea2.parse(data_str)
