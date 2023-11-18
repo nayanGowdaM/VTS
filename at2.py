@@ -1,7 +1,7 @@
 import serial
 import time
 import pynmea2
-
+import re
 # Default values
 default_phone_number = "+91 1234567890"
 default_password = "atdxt"
@@ -96,6 +96,13 @@ def send_sms(ser, to_phone_number, message):
     except Exception as e:
         print(f"Error sending SMS: {e}")
 
+def extract_sender_number(response):
+    # Use regular expression to find the sender's number
+    match = re.search(r'\+CMGL: \d+,"(\+91\d{10})",', response)
+    if match:
+        return match.group(1)
+    return None
+
 def receive_sms(ser, from_phone_number):
     try:
         print(f"Receiving SMS from {from_phone_number}...")
@@ -166,17 +173,20 @@ def main():
                 if initialize_gsm(ser):
                     if check_network_status(ser):
                         receive = receive_sms(ser, default_phone_number)
+                       
+                        sender_number = extract_phone_number(receive)
+                        
                         received_upper=receive.upper()
 
                         if(received_upper=="HI"):
                             msg="enter the password"
-                            send_sms(ser,default_phone_number,msg)
-                            check=receive_sms(ser,default_phone_number)
+                            send_sms(ser,sender_number,msg)
+                            check=receive_sms(ser,sender_number)
                             if(check==default_password):
-                                send_sms(ser,default_phone_number,"sending the location ...")
+                                send_sms(ser,sender_number,"sending the location ...")
                                 location(ser_gps,ser)
                             else:
-                                send_sms(ser,default_phone_number,"incorrect password restart the communication with HI")
+                                send_sms(ser,sender_number,"incorrect password restart the communication with HI")
                                 break;
 
                         print(f"Received SMS: {receive}")
