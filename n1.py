@@ -2,13 +2,15 @@ import time
 import serial
 import re
 
-def detect_gsm_port():
+i=0
+
+def detect_gsm_port(i):
     # Replace 'GSM' with the identifier in the device name or description
     pattern = re.compile(r'/dev/ttyUSB(\d+)')  # Adjust the pattern based on your system
 
     try:
-        for i in range(1):  # Try checking up to 10 ports
-            port = f'/dev/ttyUSB{i}'
+        # Try checking up to 10 ports
+        port = f'/dev/ttyUSB{i}'
             try:
                 with serial.Serial(port, baudrate=9600, timeout=1) as ser:
                     ser.write(b'AT\r\n')
@@ -65,9 +67,10 @@ def parse_and_reply(ser, message):
 def main():
     try:
         while True:
-            gsm_port = detect_gsm_port()
+            gsm_port = detect_gsm_port(i)
             if gsm_port:
                 print(f"GSM module detected on port: {gsm_port}")
+                i=0
                 ser = serial.Serial(gsm_port, baudrate=9600, timeout=1)
 
                 try:
@@ -84,6 +87,8 @@ def main():
                     ser.close()
             else:
                 print("GSM module not found. Retrying in 60 seconds.")
+                i++
+                
                 time.sleep(60)
     except KeyboardInterrupt:
         print("KeyboardInterrupt. Exiting.")
