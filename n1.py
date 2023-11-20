@@ -1,28 +1,33 @@
 import time
 import serial
-import glob
+import re
 
-# Function to send AT commands to the GSM module
+def detect_gsm_port():
+    # Replace 'GSM' with the identifier in the device name or description
+    pattern = re.compile(r'/dev/ttyUSB(\d+)')  # Adjust the pattern based on your system
+
+    try:
+        for i in range(10):  # Try checking up to 10 ports
+            port = f'/dev/ttyUSB{i}'
+            try:
+                with serial.Serial(port, baudrate=9600, timeout=1) as ser:
+                    ser.write(b'AT\r\n')
+                    time.sleep(1)
+                    response = ser.read(ser.in_waiting).decode()
+                    if 'OK' in response:
+                        return port
+            except serial.SerialException:
+                pass
+    except Exception as e:
+        print(f"Error detecting GSM port: {e}")
+
+    return None
+
 def send_command(ser, command, timeout=1):
     ser.write(command.encode() + b'\r\n')
     time.sleep(timeout)
     return ser.read(ser.in_waiting).decode()
 
-# Function to find a suitable serial port dynamically
-def find_serial_port():
-    ports = glob.glob('/dev/ttyUSB*')  # Adjust the pattern based on your system
-    for port in ports:
-        try:
-            ser = serial.Serial(port, baudrate=9600, timeout=1)
-            response = send_command(ser, "AT")
-            ser.close()
-            if "OK" in response:
-                return port
-        except Exception as e:
-            print(f"Error checking port {port}: {e}")
-    return None
-
-# Function to read SMS messages
 def read_sms(ser):
     response = send_command(ser, "AT+CMGF=1")  # Set SMS mode to text
     print(response)
@@ -33,11 +38,10 @@ def read_sms(ser):
     messages = response.split("+CMGL: ")[1:]
     return messages
 
-# Function to parse and reply to SMS
 def parse_and_reply(ser, message):
     lines = message.split('\n')
     print("Printing Lines:", lines)
-    # Ensure there are enough lines to parse
+
     if len(lines) >= 3:
         sender_line = lines[0].strip().split(",")
         print("Sender Lines: ", sender_line)
@@ -58,29 +62,31 @@ def parse_and_reply(ser, message):
     else:
         print("Error: Insufficient lines in the message to parse.")
 
-# Main function
 def main():
     try:
         while True:
-            port = find_serial_port()
-            if port:
-                print(f"Using serial port: {port}")
-                # Replace the 'COMx' placeholder with the actual serial port
-                ser = serial.Serial(port, baudrate=9600, timeout=1)
+            gsm_port = detect_gsm_port()
+            if gsm_port:
+                print(f"GSM module detected on port: {gsm_port}")
+                ser = serial.Serial(gsm_port, baudrate=9600, timeout=1)
 
-                messages = read_sms(ser)
+                try:
+                    while True:
+                        messages = read_sms(ser)
 
-                if messages:
-                    print(messages)
-                    most_recent_message = messages[-1]
-                    parse_and_reply(ser, most_recent_message)
+                        if messages:
+                            print(messages)
+                            most_recent_message = messages[-1]
+                            parse_and_reply(ser, most_recent_message)
 
-                ser.close()
-
-            time.sleep(10)  # Adjust the sleep time as needed
-
+                        time.sleep(10)  # Adjust the sleep time as needed
+                finally:
+                    ser.close()
+            else:
+                print("GSM module not found. Retrying in 60 seconds.")
+                time.sleep(60)
     except KeyboardInterrupt:
-        print("Script terminated by user.")
+        print("KeyboardInterrupt. Exiting.")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
