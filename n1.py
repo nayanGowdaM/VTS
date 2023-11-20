@@ -7,7 +7,7 @@ def detect_gsm_port():
     pattern = re.compile(r'/dev/ttyUSB(\d+)')  # Adjust the pattern based on your system
 
     try:
-        for i in range(10):  # Try checking up to 10 ports
+        for i in range(1):  # Try checking up to 10 ports
             port = f'/dev/ttyUSB{i}'
             try:
                 with serial.Serial(port, baudrate=9600, timeout=1) as ser:
