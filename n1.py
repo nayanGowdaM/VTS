@@ -60,9 +60,10 @@ def parse_and_reply(ser, message):
 
 # Main function
 def main():
+    ports = [/dev/ttyUSB0,/dev/ttyUSB1]
     try:
         while True:
-            port = find_serial_port()
+            for port in ports
             if port:
                 print(f"Using serial port: {port}")
                 # Replace the 'COMx' placeholder with the actual serial port
@@ -75,7 +76,7 @@ def main():
                     most_recent_message = messages[-1]
                     parse_and_reply(ser, most_recent_message)
 
-                ser.close()
+                
 
             time.sleep(10)  # Adjust the sleep time as needed
 
