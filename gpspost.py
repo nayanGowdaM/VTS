@@ -1,5 +1,6 @@
 import os
 import serial
+import shutil
 import psutil
 import pynmea2
 import json
@@ -58,7 +59,7 @@ def create_table(connection, table_name):
         print(f"Error creating table '{table_name}':", error)
 
 
-def update_local_database(your_table_name, vehicle_id, latitude, longitude, speed, timestamp):
+def update_local_database(your_table_name, vehicle_id, latitude, longitude, speed, timestamp, threshold_sq):
     # Connect to the local database
     local_connection = psycopg2.connect(
         database=local_db_name,
@@ -67,21 +68,37 @@ def update_local_database(your_table_name, vehicle_id, latitude, longitude, spee
         host="localhost",
         port=5432,  # Default PostgreSQL port
     )
-    local_cursor = local_connection.cursor()
-
+    
     try:
-        local_cursor = local_connection.cursor()
+        cursor = local_connection.cursor()
 
-        insert_query = f"""
-            INSERT INTO {your_table_name} (vehicle_id, latitude, longitude, speed, timestamp)
-            VALUES (%s, %s, %s, %s, %s)
+        # Check if the difference between successive latitude and longitude is greater than the threshold
+        select_query = f"""
+            SELECT latitude, longitude
+            FROM {your_table_name}
+            ORDER BY timestamp DESC
+            LIMIT 1
         """
-        local_cursor.execute(insert_query, (vehicle_id, latitude, longitude, speed, timestamp))
-        local_connection.commit()
-        print("Data inserted successfully.")
+        cursor.execute(select_query)
+        last_lat, last_lon = cursor.fetchone() if cursor.rowcount > 0 else (None, None)
+
+        if last_lat is None or last_lon is None or ((latitude - last_lat)*2 + (longitude - last_lon)*2 > threshold_sq):
+            # If the difference is greater than the threshold, insert the data
+            insert_query = f"""
+                INSERT INTO {your_table_name} (vehicle_id, latitude, longitude, speed, timestamp)
+                VALUES (%s, %s, %s, %s, %s)
+            """
+            cursor.execute(insert_query, (vehicle_id, latitude, longitude, speed, timestamp))
+            local_connection.commit()
+            print("Data inserted successfully.")
+        else:
+            print("Skipping data insertion due to proximity to the previous point.")
+
     except (Exception, psycopg2.Error) as error:
         print("Error inserting data:", error)
-
+    finally:
+        # Close the connection
+        local_connection.close()
 
 def sync_data_to_aws(your_table_name):
     # Connect to the local and AWS RDS databases
@@ -218,25 +235,141 @@ def append_data_to_file(data, file_path):
         json.dump(data, geojson_file)
         geojson_file.write("\n")
 
+# Function to get the current disk usage in percentage and gigabytes
+def get_disk_usage():
+    disk_usage = psutil.disk_usage('/')
+    total_gb = round(disk_usage.total / (1024 ** 3), 2)
+    used_gb = round(disk_usage.used / (1024 ** 3), 2)
+    percent_used = disk_usage.percent
+    return percent_used, used_gb, total_gb
 
-# Function to connect to PostgreSQL in localhost
+# Function to delete older files in the specified folder based on percentage usage
+def delete_older_files(folder_path, threshold_high=80, threshold_low=75):
+    percent_used, used_gb, total_gb = get_disk_usage()
 
+    #print(f"Current disk usage: {percent_used}% ({used_gb} GB used out of {total_gb} GB")
+
+    if percent_used >= threshold_high:
+        print(f"Disk usage exceeds {threshold_high}%. Deleting older files to free up space.")
+
+        files = os.listdir(folder_path)
+        files.sort(key=lambda x: os.path.getctime(os.path.join(folder_path, x)))
+
+        while percent_used >= threshold_low and files:
+            file_to_delete = files.pop(0)
+            file_path = os.path.join(folder_path, file_to_delete)
+
+            try:
+                os.remove(file_path)
+                print(f"Deleted: {file_to_delete}")
+            except Exception as e:
+                print(f"Error deleting {file_to_delete}: {str(e)}")
+
+            percent_used, _, _ = get_disk_usage()
+
+        print(f"Deletion complete. Current disk usage: {percent_used}% ({used_gb} GB used out of {total_gb} GB)")
+
+
+def check_table_exists(connection, table_name):
+    try:
+        cursor = connection.cursor()
+        cursor.execute(f"SELECT * FROM information_schema.tables WHERE table_name = '{table_name}'")
+        return cursor.fetchone() is not None
+    except (Exception, psycopg2.Error) as error:
+        print(f"Error checking table existence for '{table_name}':", error)
+
+
+def sync_and_delete_previous_table(previous_table_name):
+    # Connect to the local and AWS RDS databases
+    local_connection = connect_to_db()
+    aws_connection = psycopg2.connect(
+        database=aws_db_name,
+        user=aws_db_user,
+        password=aws_db_password,
+        host=aws_db_endpoint,
+        port=5432,  # Default PostgreSQL port
+    )
+
+    local_cursor = local_connection.cursor()
+    aws_cursor = aws_connection.cursor()
+
+    create_table(aws_connection, previous_table_name)
+
+    try:
+        # Fetch data from the local and AWS RDS databases
+        local_cursor.execute(f"SELECT * FROM {previous_table_name}")
+        local_data = local_cursor.fetchall()
+
+        aws_cursor.execute(f"SELECT * FROM {previous_table_name}")
+        aws_data = aws_cursor.fetchall()
+
+        # Identify extra data in the local database
+        local_ids = set(row[0] for row in local_data)  # Assuming id is at index 0
+        aws_ids = set(row[0] for row in aws_data)  # Assuming id is at index 0
+
+        extra_data = [row for row in local_data if row[0] not in aws_ids]
+
+        # Append extra data to the AWS RDS database
+        for row in extra_data:
+            aws_cursor.execute(
+                f"INSERT INTO {previous_table_name} (vehicle_id, latitude, longitude, speed, timestamp) VALUES (%s, %s, %s, %s, %s)",
+                row,
+            )
+
+        # Commit changes
+        aws_connection.commit()
+
+        print(f"Previous date's data appended to the AWS RDS database. Table: {previous_table_name}")
+
+        # Delete the table from the local database
+        local_cursor.execute(f"DROP TABLE IF EXISTS {previous_table_name}")
+        local_connection.commit()
+
+        print(f"Table '{previous_table_name}' deleted from the local database.")
+
+    finally:
+        # Close connections
+        local_cursor.close()
+        aws_cursor.close()
+        local_connection.close()
+        aws_connection.close()
 
 
 # Main function
 def main():
     ser = serial.Serial('/dev/ttyUSB0', baudrate=9600, timeout=1.0)
     ct = 0
+    id="12"
 
     # Set your folder path here
     folder_path = "/home/atdxt/Documents/jso"
     geojson_file_path = get_geojson_file_path(folder_path)
+    display_counter=0
 
     print(f"Waiting for GPS connection. Writing to file: {geojson_file_path}")
 
     try:
+        # Check and sync the previous day's data at the start
+        previous_date = (datetime.now() - timedelta(days=1)).strftime("%Y_%m_%d")
+        previous_table_name = f"vehicle_{id}_{previous_date}"
+
+        local_connection = connect_to_db()
+        if check_table_exists(local_connection, previous_table_name):
+            sync_and_delete_previous_table(previous_table_name)
+        
         while True:
             try:
+                delete_older_files(folder_path)
+                
+                display_counter += 1
+
+                if display_counter % 300 == 0:
+                    percent_used, used_gb, total_gb = get_disk_usage()
+                    print(f"Current disk usage: {percent_used}% ({used_gb} GB used out of {total_gb})")
+                    
+                    # Reset display_counter after displaying information
+                    display_counter = 0
+                    
                 data = ser.readline().decode('utf-8')
                 if data.startswith('$GNRMC'):
                     location_data, latitude, longitude = parse_gnrmc(data)
@@ -248,17 +381,18 @@ def main():
                             append_data_to_file(location_data, geojson_file_path)
                             print(f"Location data appended to GeoJSON file at ct={ct}")
                             today = read_rtc()[0]
-                            table_name = f"vehicle_16_{today}"  # Assuming vehicle ID is 12, adjust as needed
+                            table_name = f"vehicle_{id}_{today}"  # Assuming vehicle ID is 12, adjust as needed
 
                             connection = connect_to_db()
                             create_table(connection, table_name)
                             update_local_database(
                                 table_name,
-                                12,
+                                id,
                                 latitude,
                                 longitude,
                                 location_data["properties"]["speed"],
                                 location_data["properties"]["timestamp"],
+                                threshold_sq=0.000001,
                             )
 
                             if check_internet_connection():
@@ -282,11 +416,13 @@ def main():
                                     longitude,
                                     location_data["properties"]["speed"],
                                     location_data["properties"]["timestamp"],
+                                    threshold_sq=0.000001,
                                 )
                                 ct = (ct + 1) % 11
                             # Reset the counter after every 10 iterations
                         else:
                             ct = (ct + 1) % 11
+                
 
             except KeyboardInterrupt:
                 ser.close()
