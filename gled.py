@@ -1,3 +1,4 @@
+#!/home/atdxt/Project/myenv/bin/python
 import RPi.GPIO as GPIO
 import os
 import time
@@ -14,12 +15,21 @@ import busio
 from datetime import datetime, timedelta
 
 # GPIO pin numbers for LEDs
-RED_LED_PIN = 7
-GREEN_LED_PIN = 13
+RED_LED_PIN = 27
+GREEN_LED_PIN = 4
 
+def ssssetup_led(led_pin):
+    try:
+       GPIO.setmode(GPIO.BOARD)
+       print("Set")
+       GPIO.setup(led_pin, GPIO.OUT)
+       return led_pin
+    except:
+        print("valueError")
+        pass
 def setup_led(led_pin):
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(led_pin, GPIO.OUT)
+    GPIO.setup(led_pin,GPIO.OUT)
     return led_pin
 
 
@@ -386,6 +396,7 @@ def main():
             sync_and_delete_previous_table(previous_table_name)
         
         while True:
+            #blink_led(green_led_pin,blink_count=1)
             try:
                 delete_older_files(folder_path)
                 
@@ -404,7 +415,9 @@ def main():
                     if location_data:
                         print(f"Latitude: {latitude}, Longitude: {longitude}")
                         print(ct)
+                        blink_led(green_led_pin,blink_count=1,blink_duration=0.1)
                         if ct == 10:
+                            #blink_led(green_led_pin,blink_count=1,blink_duration=0.1)
                             # Append data to file when ct=10
                             append_data_to_file(location_data, geojson_file_path)
                             print(f"Location data appended to GeoJSON file at ct={ct}")
@@ -434,7 +447,7 @@ def main():
                                 # Reset the counter after successful upload
                                 ct = (ct + 1) % 11
                                 # Blink green LED three times on successful AWS sync
-                                blink_led(green_led_pin, blink_count=3)
+                                blink_led(green_led_pin, blink_count=1,blink_duration=0.5)
                             else:
                                 print("No internet connection. Data will be uploaded on the next attempt.")
                                 connection = connect_to_db()
@@ -450,7 +463,7 @@ def main():
                                 )
                                 ct = (ct + 1) % 11
                                 # Blink red LED on AWS sync failure
-                                blink_led(red_led_pin)
+                                blink_led(red_led_pin,blink_count=1,blink_duration=1)
                             # Reset the counter after every 10 iterations
                         else:
                             ct = (ct + 1) % 11
@@ -462,7 +475,7 @@ def main():
             except Exception as e:
                 print("Error:", str(e))
                 # Blink red LED on error
-                blink_led(red_led_pin)
+                blink_led(red_led_pin,blink_count=3,blink_duration=0.1)
 
     except serial.serialutil.SerialException:
         print("GPS connection established.")

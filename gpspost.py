@@ -12,6 +12,13 @@ import busio
 from datetime import datetime
 from datetime import timedelta
 
+def setup_led(led_pin):
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(led_pin, GPIO.OUT)
+    return led_pin
+
+
+
 # declaring credentials for local host
 local_db_name = "atdxtrv"
 local_db_user = "atdxt"
@@ -340,7 +347,9 @@ def main():
     ser = serial.Serial('/dev/ttyUSB0', baudrate=9600, timeout=1.0)
     ct = 0
     id="12"
-
+    
+    led_pin=setup_led(7)
+    GPIO.output(led_pin,GPIO.HIGH)
     # Set your folder path here
     folder_path = "/home/atdxt/Documents/jso"
     geojson_file_path = get_geojson_file_path(folder_path)
