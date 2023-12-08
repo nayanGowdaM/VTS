@@ -18,8 +18,7 @@ RED_LED_PIN = 7
 GREEN_LED_PIN = 13
 
 def setup_led(led_pin):
-    if GPIO.getmode() is None:
-        GPIO.setmode(GPIO.BOARD)
+    GPIO.setmode(GPIO.BCM)
     GPIO.setup(led_pin, GPIO.OUT)
     return led_pin
 
