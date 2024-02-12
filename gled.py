@@ -61,7 +61,7 @@ local_db_user = "atdxt"
 local_db_password = "1234"
 
 # AWS RDS database credentials
-aws_db_endpoint = "demo.coccpvzcn43y.ap-southeast-1.rds.amazonaws.com"
+aws_db_endpoint = "database-1.coccpvzcn43y.ap-southeast-1.rds.amazonaws.com"
 aws_db_name = "postgres"
 aws_db_user = "postgres"
 aws_db_password = "rvce1234"
