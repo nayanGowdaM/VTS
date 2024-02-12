@@ -18,7 +18,7 @@ def get_locations():
         with psycopg2.connect(
                 user="postgres",
                 password="rvce1234",
-                host="demo.coccpvzcn43y.ap-southeast-1.rds.amazonaws.com",
+                host="database-1.coccpvzcn43y.ap-southeast-1.rds.amazonaws.com",
                 port=5432,
                 database="postgres"
         ) as connection:
