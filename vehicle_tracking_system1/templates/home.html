@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>HomePage</title>
+        <link rel="stylesheet" type="text/css" href="./styles/style1.css" />
+    </head>
+    <body>
+        <div class="container">
+        <header class="header">
+            <h1>Vehicle Tracking System</h1>
+            <button class="btn transparent" id="login-btn">Login</button>
+        </header>
+        
+        <div class="content">
+            <img src="./img/GPS.jpg" id="imgprop" class="image" alt="Vehicle Tracking System Image" />
+            <div style="margin-top: 20px;">
+            <p>The Vehicle Tracking System allows you to monitor the location, speed, and status of your vehicles in real-time. Ensure the safety and efficiency of your fleet with our advanced tracking technology.</p>
+            </div>
+        </div>
+        </div>
+
+        <script>
+        document.getElementById('login-btn').addEventListener('click', function() {
+            window.location.href = 'index.html'; // Redirect to the sign-in page
+        });
+        </script>
+    </body>
+</html>
