@@ -2,22 +2,19 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vehicle Tracking System - ATDXT Map</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Tracking System - ATDXT</title>
 
     <!-- Leaflet CSS and JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
     <style>
         body {
             margin: 0;
             padding: 0;
-            font-family: "Arial", sans-serif;
-            background: #f8f8f8;
-            color: #333;
-            transition: background 0.3s, color 0.3s;
+            font-family: 'Arial', sans-serif;
+            background: #f0f0f0; /* Set your desired background color */
         }
 
         header {
@@ -26,44 +23,47 @@
             background: #333;
             color: #fff;
             margin-bottom: 20px;
-            position: relative;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 24px;
         }
 
         #map {
-            height: calc(100vh - 120px);
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            overflow: hidden;
-            transition: border 0.3s;
+            display: none;
+            height: calc(100vh - 120px); /* Adjust the height based on your header size and map container */
         }
 
-        #top-right-info {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 16px;
-            background: #fff;
-            padding: 5px 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        /* Dark Mode Styles */
+        body.dark-mode {
+            background: #333;
+            color: #fff;
         }
 
+        #map.dark-mode {
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+
+        .leaflet-popup-content.dark-mode {
+            color: #fff;
+        }
+
+        /* Menu Button Styles */
+        #menu-button {
+            text-align: center;
+            padding: 10px;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        /* Button Container Styles */
         #button-container {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 1;
             display: flex;
-            gap: 10px;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 10px;
         }
 
-        button {
+        /* Show Statistics Button Styles */
+        #show-stats-button,
+        #dark-mode-button {
             background-color: #4caf50;
             color: white;
             padding: 10px 15px;
@@ -73,353 +73,384 @@
             cursor: pointer;
             transition: background 0.3s;
         }
+        /* Show Statistics Button Styles */
+#show-stats-button {
+    background-color: #4caf50;
+    color: white;
+    padding: 10px 15px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+    margin-right: 10px; /* Add some margin for spacing */
+}
 
-        button:hover {
-            background-color: #45a049;
+#show-stats-button:hover {
+    background-color: #45a049;
+}
+
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 600px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: left;
+            overflow-y: auto;
+            max-height: 80vh;
         }
 
-body.dark-mode {
-  background: #333;
-  color: #fff;
-}
+        .modal.dark-mode {
+            background-color: #444;
+            color: #fff;
+        }
 
-#map.dark-mode {
-  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
-}
+        /* Blur effect */
+        .blurred {
+<!--            filter: blur(5px);-->
+        }
 
-.leaflet-popup-content.dark-mode {
-  color: #fff;
-}
-<!--        .dark-mode #map {-->
-<!--            border-color: #444;-->
-<!--        }-->
-
-<!--        .dark-mode body {-->
-<!--            background: #333;-->
-<!--            color: #fff;-->
-<!--        }-->
-
-<!--        .dark-mode header {-->
-<!--            background: #222;-->
-<!--        }-->
-<!--        .leaflet-layer,-->
-<!--.leaflet-control-zoom-in,-->
-<!--.leaflet-control-zoom-out,-->
-<!--.leaflet-control-attribution {-->
-<!--  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);-->
-<!--}-->
+        /* Close button styles */
+        .modal .close {
+            float: right;
+            font-size: 20px;
+            cursor: pointer;
+        }
     </style>
 </head>
+
 <body>
     <header>
         <h1>Vehicle Tracking System - ATDXT</h1>
-        <div id="top-right-info">
-
-        </div>
+        <button id="show-stats-button">Show Statistics</button>
+        <button id="dark-mode-button" onclick="toggleDarkMode()">Toggle Dark Mode</button>
     </header>
 
-    <!-- Add a div for the map -->
     <div id="map"></div>
-
-    <!-- Add a container for the button -->
     <div id="button-container">
-       <button id="dark-mode-button" onclick="toggleDarkMode()">Toggle Dark Mode</button>
+        <div id="menu-button">Click to Open Map</div>
     </div>
 
-    <script>
-<!--       function toggleDarkMode() {-->
-<!--                document.body.classList.toggle("dark-mode");-->
-<!--            }-->
-        document.addEventListener("DOMContentLoaded", () => {
-            const map = L.map("map").setView([0, 0], 2);
-  const mapContainer = document.getElementById("map");
+    <!-- Modal for showing statistics -->
+    <div id="stats-modal" class="modal">
+        <span class="close" id="close-modal">&times;</span>
+        <div id="stats-content"></div>
+    </div>
 
-  // Function to toggle dark mode for both the map and the website
-  function toggleDarkMode() {
-    mapContainer.classList.toggle("dark-mode");
-    document.body.classList.toggle("dark-mode");
-  }
-  // Expose the toggleDarkMode function globally for the onclick attribute
-  window.toggleDarkMode = toggleDarkMode;
+    <script type="text/javascript">
+        const vehicle_id = "{{ vehicle_id }}"; // This will be replaced by the actual vehicle_id value when rendering the template
+    </script>
+    <script type="module">
+        // Import Leaflet separately
+        import 'https://unpkg.com/leaflet/dist/leaflet.js';
 
-            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                attribution: "© OpenStreetMap contributors",
-            }).addTo(map);
+        let map;
+        let isStatsDisplayed = false;
+        let showStatsButton = document.getElementById('show-stats-button');
+        async function initMap(jsonData) {
+            console.log('Received JSON data:', jsonData); // Log the received JSON data
 
-            // Define Google Maps tile layers
-            const googleStreets = L.tileLayer(
-                "https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
-                    maxZoom: 20,
-                    subdomains: ["mt0", "mt1", "mt2", "mt3"],
-                }
-            );
+            if (!map) {
+                map = L.map('map').setView([0, 0], 2);
 
-            const googleHybrid = L.tileLayer(
-                "https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}", {
-                    maxZoom: 20,
-                    subdomains: ["mt0", "mt1", "mt2", "mt3"],
-                }
-            );
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                    attribution: "© OpenStreetMap contributors",
+                }).addTo(map);
 
-            const googleSat = L.tileLayer(
-                "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", {
-                    maxZoom: 20,
-                    subdomains: ["mt0", "mt1", "mt2", "mt3"],
-                }
-            );
-
-            const googleTerrain = L.tileLayer(
-                "https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}", {
-                    maxZoom: 20,
-                    subdomains: ["mt0", "mt1", "mt2", "mt3"],
-                }
-            );
-
-            // Add a layer control
-            const baseLayers = {
-                "Street View": L.tileLayer(
-                    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                        attribution: "© OpenStreetMap contributors",
+                // Define Google Maps tile layers
+                const googleStreets = L.tileLayer(
+                    "https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+                        maxZoom: 20,
+                        subdomains: ["mt0", "mt1", "mt2", "mt3"],
                     }
-                ),
-                "Google Streets": googleStreets,
-                "Google Hybrid": googleHybrid,
-                "Google Satellite": googleSat,
-                "Google Terrain": googleTerrain,
-            };
+                );
 
-            L.control.layers(baseLayers).addTo(map);
+                const googleHybrid = L.tileLayer(
+                    "https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}", {
+                        maxZoom: 20,
+                        subdomains: ["mt0", "mt1", "mt2", "mt3"],
+                    }
+                );
 
-            // Get the table name from the URL
-            const params = new URLSearchParams(window.location.search);
-            const tableName = params.get('table_name');
+                const googleSat = L.tileLayer(
+                    "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", {
+                        maxZoom: 20,
+                        subdomains: ["mt0", "mt1", "mt2", "mt3"],
+                    }
+                );
 
-            if (!tableName) {
-                // If the table name is not provided, handle accordingly (you can redirect or display an error message)
-                console.error('Table name not provided.');
-                return;
+                const googleTerrain = L.tileLayer(
+                    "https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}", {
+                        maxZoom: 20,
+                        subdomains: ["mt0", "mt1", "mt2", "mt3"],
+                    }
+                );
+
+                // Add a layer control
+                const baseLayers = {
+                    "Street View": L.tileLayer(
+                        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                            attribution: "© OpenStreetMap contributors",
+                        }
+                    ),
+                    "Google Streets": googleStreets,
+                    "Google Hybrid": googleHybrid,
+                    "Google Satellite": googleSat,
+                    "Google Terrain": googleTerrain,
+                };
+
+                L.control.layers(baseLayers).addTo(map);
+            } else {
+                map.eachLayer(layer => {
+                    if (!(layer instanceof L.TileLayer)) {
+                        map.removeLayer(layer);
+                    }
+                });
             }
 
-            // Function to perform reverse geocoding
-            async function reverseGeocode(lat, lon) {
-                const apiKey = "0c1ca39e470d4fd0b1e723f0bd920ad4";
-                const apiUrl = `https://api.opencagedata.com/geocode/v1/json?key=${apiKey}&q=${lat}+${lon}&pretty=1`;
+            const lineStringCoordinates = [];
+            const speeds = [];
+            const timestamps = [];
 
+            let startMarker = null;
+            let endMarker = null;
+
+            const features = jsonData[0];
+            const firstFeature = features[0];
+            const lastFeature = features[features.length - 1];
+
+            const startCoords = firstFeature.geometry.coordinates;
+            startMarker = L.marker([startCoords[0], startCoords[1]]).addTo(map);
+            startMarker.bindPopup(`<b>Start Point</b><br>Latitude: ${startCoords[0]}<br>Longitude: ${startCoords[1]}<br>Timestamp: ${firstFeature.properties.timestamp}<br>Speed: ${firstFeature.properties.speed} km/h<br><a href="https://www.google.com/maps/search/?api=1&query=${startCoords[0]},${startCoords[1]}" target="_blank">View on Google Maps</a>`);
+
+            // End Marker
+            const endCoords = lastFeature.geometry.coordinates;
+            endMarker = L.marker([endCoords[0], endCoords[1]]).addTo(map);
+            endMarker.bindPopup(`<b>End Point</b><br>Latitude: ${endCoords[0]}<br>Longitude: ${endCoords[1]}<br>Timestamp: ${lastFeature.properties.timestamp}<br>Speed: ${lastFeature.properties.speed} km/h<br><a href="https://www.google.com/maps/search/?api=1&query=${endCoords[0]},${endCoords[1]}" target="_blank">View on Google Maps</a>`);
+
+            features.forEach((feature, index) => {
                 try {
-                    const response = await fetch(apiUrl);
-                    const data = await response.json();
-
-                    // Check if the response contains results
-                    if (data.results && data.results.length > 0) {
-                        const placeName = data.results[0].formatted;
-                        return placeName;
-                    } else {
-                        return "Unknown Location";
+                    if (feature.geometry && feature.geometry.type === 'LineString') {
+                        if (feature.geometry.coordinates && feature.geometry.coordinates.length > 0) {
+                            const latitude = feature.geometry.coordinates[0];
+                            const longitude = feature.geometry.coordinates[1];
+                            lineStringCoordinates.push([latitude, longitude]);
+                            speeds.push(feature.properties.speed);
+                            timestamps.push(feature.properties.timestamp);
+                        } else {
+                            console.log('Invalid coordinates for LineString geometry:', feature.geometry.coordinates);
+                        }
                     }
                 } catch (error) {
-                    console.error("Error performing reverse geocoding:", error);
-                    return "Error retrieving location";
-                }
-            }
-            function haversineDistance(coord1, coord2) {
-    const [lat1, lon1] = coord1;
-    const [lat2, lon2] = coord2;
-
-    const R = 6371; // Radius of the Earth in kilometers
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
-
-    return distance * 1000;
-}
-            // Function to calculate distance using the haversine formula
-            function haversine(lat1, lon1, lat2, lon2) {
-                const R = 6371; // Radius of the Earth in kilometers
-                const dLat = (lat2 - lat1) * (Math.PI / 180);
-                const dLon = (lon2 - lon1) * (Math.PI / 180);
-                const a =
-                    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                const distance = R * c;
-
-                return distance * 1000; // Convert to meters
-            }
-
-            // Function to calculate distance using haversine formula
-            function calculateDistance(locations) {
-                let totalDistance = 0;
-
-                for (let i = 1; i < locations.length; i++) {
-                    const prev = locations[i - 1];
-                    const current = locations[i];
-                    const d = haversine(prev.latitude, prev.longitude, current.latitude, current.longitude);
-                    totalDistance += d;
-                }
-
-                return totalDistance / 1000; // Convert to kilometers
-            }
-
-            // Function to calculate time taken
-            function calculateTimeTaken(locations) {
-                // Check if locations array is not empty and has more than one element
-                if (locations && locations.length > 1) {
-                    const startTime = new Date(locations[0].timestamp);
-                    const endTime = new Date(locations[locations.length - 1].timestamp);
-
-                    const timeDifference = endTime - startTime;
-
-                    return timeDifference / 1000; // Convert milliseconds to seconds
-                } else {
-                    console.error('Not enough data to calculate time taken.');
-                    return 0; // or return a default value
-                }
-            }
-
-            // Function to calculate the average speed
-            function calculateAverageSpeed(locations) {
-                const distance = calculateDistance(locations);
-                const timeTaken = calculateTimeTaken(locations);
-
-                if (timeTaken > 0) {
-                    return distance / (timeTaken / 3600); // Convert to km/h
-                } else {
-                    console.error('Cannot calculate average speed with zero time taken.');
-                    return 0; // or return a default value
-                }
-            }
-
-            // Function to format time as hh hr:mm min:ss s
-            function formatTime(seconds) {
-                const hours = Math.floor(seconds / 3600);
-                const minutes = Math.floor((seconds % 3600) / 60);
-                const remainingSeconds = seconds % 60;
-
-                return `${hours} hr:${minutes} min:${remainingSeconds} s`;
-            }
-
-            // Fetch location data from Flask backend
-            fetch('/get_locations', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        'table_name': tableName
-                    })
-                })
-                .then(response => response.json())
-                .then(async locations => {
-                    // Create an array to store coordinates for the line string
-                    const pathCoordinates = [];
-
-                    // Add start point marker with customized popup content
-                    const startMarker = L.marker([locations[0].latitude, locations[0].longitude])
-                        .addTo(map)
-                        .bindPopup(`<b>Start Point</b><br>Coordinates: ${locations[0].latitude}, ${locations[0].longitude}<br>Timestamp: ${locations[0].timestamp}<br>Location: ${await reverseGeocode(locations[0].latitude, locations[0].longitude)}`);
-
-                    // Add end point marker with customized popup content
-                    const endMarker = L.marker([locations[locations.length - 1].latitude, locations[locations.length - 1].longitude])
-                        .addTo(map)
-                        .bindPopup(`<b>End Point</b><br>Coordinates: ${locations[locations.length - 1].latitude}, ${locations[locations.length - 1].longitude}<br>Timestamp: ${locations[locations.length - 1].timestamp}<br>Location: ${await reverseGeocode(locations[locations.length - 1].latitude, locations[locations.length - 1].longitude)}`);
-
-// Initialize the pathCoordinates array outside the loop
-
- locations.forEach(async (location, index) => {
-                const { latitude, longitude, timestamp } = location;
-                const coordinates = [latitude, longitude];
-
-                if (!isNaN(latitude) && !isNaN(longitude)) {
-                    console.log(`Coordinate[${index}]: ${latitude}, ${longitude}`);
-
-                    if (index < locations.length - 1) {
-                        const nextLocation = locations[index + 1];
-                        const nextCoordinates = [nextLocation.latitude, nextLocation.longitude];
-
-                        if (!isNaN(nextCoordinates[0]) && !isNaN(nextCoordinates[1])) {
-                            const distance = haversineDistance(coordinates, nextCoordinates);
-
-                            console.log(`Distance to next point: ${distance}`);
-
-                            // Check if the distance is greater than the threshold (100 meters)
-                            if (!isNaN(distance) && distance > 100) {
-                                console.log(`Intermediate Point Detected: ${latitude}, ${longitude}`);
-
-                                const locationInfo = await reverseGeocode(latitude, longitude);
-                                const intermediateMarker = L.marker(coordinates)
-                                    .addTo(map)
-                                    .bindPopup(`<b>Abrupt Change</b><br>Coordinates: ${latitude}, ${longitude}<br>Timestamp: ${timestamp}<br>Location: ${locationInfo}`);
-
-                                const dashedLine = L.polyline([coordinates, nextCoordinates], {
-                                    color: 'blue',
-                                    dashArray: '10, 10'
-                                }).addTo(map);
-                            } else {
-                                const solidLine = L.polyline([coordinates, nextCoordinates], {
-                                    color: 'blue'
-                                }).addTo(map);
-                            }
-                        }
-                    } else {
-                        pathCoordinates.push(coordinates);
-
-                        console.log(`Last Segment Coordinate[${index}]: ${latitude}, ${longitude}`);
-
-                        const path = L.polyline(pathCoordinates, {
-                            color: 'blue'
-                        }).addTo(map);
-                    }
+                    console.error('Error processing feature:', error);
                 }
             });
 
+            console.log(lineStringCoordinates);
+            console.log(speeds);
+            console.log(timestamps);
 
+            if (lineStringCoordinates.length > 0) {
+                const polyline = L.polyline(lineStringCoordinates, { color: 'blue' }).addTo(map);
+                map.fitBounds(polyline.getBounds());
+            }
 
+            
 
+            showStatsButton.addEventListener('click', async () => {
+                if (isStatsDisplayed) {
+                    return; // Prevent further execution if stats are already displayed
+                }
+                const startCoords = [firstFeature.geometry.coordinates[0], firstFeature.geometry.coordinates[1]];
+                const endCoords = [lastFeature.geometry.coordinates[0], lastFeature.geometry.coordinates[1]];
 
+                // Fetch the start and end locations
+                const startLocation = await reverseGeocode(startCoords[0], startCoords[1]);
+                const endLocation = await reverseGeocode(endCoords[0], endCoords[1]);
 
+                const startTime = new Date(firstFeature.properties.timestamp.replace(/_/g, ' '));
+                const endTime = new Date(lastFeature.properties.timestamp.replace(/_/g, ' '));
+                const timeDifference = Math.abs(endTime - startTime) / 1000; // Time taken in seconds
+                const hours = Math.floor(timeDifference / 3600);
+                const minutes = Math.floor((timeDifference % 3600) / 60);
+                const seconds = Math.floor(timeDifference % 60);
 
-                    // Zoom the map to fit the path
-                    map.fitBounds(pathCoordinates);
+                const averageSpeed = speeds.reduce((acc, curr) => acc + curr, 0) / speeds.length;
 
-                    // Add a button to show statistics alert
-                    const showStatisticsButton = document.createElement('button');
-                    showStatisticsButton.innerHTML = 'Show Statistics';
-                    showStatisticsButton.addEventListener('click', () => {
-                        showStatistics(); // Call the async function here
-                    });
+                let totalDistance = 0;
+                for (let i = 0; i < lineStringCoordinates.length - 1; i++) {
+                    const distance = calculateDistance(lineStringCoordinates[i], lineStringCoordinates[i + 1]);
+                    totalDistance += distance;
+                }
 
-                    // Append the button to the container
-                    document.getElementById('button-container').appendChild(showStatisticsButton);
+                const distanceInfo = `Distance Traveled: ${totalDistance.toFixed(2)} kilometers`;
+                const startInfo = `Start Point: ${startLocation} (Latitude ${startCoords[0]}, Longitude ${startCoords[1]})`;
+                const endInfo = `End Point: ${endLocation} (Latitude ${endCoords[0]}, Longitude ${endCoords[1]})`;
+                const statsInfo = `Average Speed: ${averageSpeed.toFixed(2)} km/h\n` +
+                    `Time Taken: ${hours} hrs ${minutes} mins ${seconds} secs`;
 
-                    // Function to show statistics alert
-                    async function showStatistics() {
-                        const distance = calculateDistance(locations);
-                        const timeTaken = calculateTimeTaken(locations);
-                        const averageSpeed = calculateAverageSpeed(locations);
-                        const startLocation = await reverseGeocode(locations[0].latitude, locations[0].longitude);
-                        const endLocation = await reverseGeocode(locations[locations.length - 1].latitude, locations[locations.length - 1].longitude);
+                        // Construct HTML with bold headings
+                // Construct HTML with bold headings
+                const statsText = `
+                <div class="modal-content">
+                <b>Statistics</b><br>
+                    <b>Start Point:</b> ${startLocation} (Latitude ${startCoords[0]}, Longitude ${startCoords[1]})<br>
+                    <b>End Point:</b> ${endLocation} (Latitude ${endCoords[0]}, Longitude ${endCoords[1]})<br>
+                    <b>Average Speed:</b> ${averageSpeed.toFixed(2)} km/h<br>
+                    <b>Time Taken:</b> ${hours} hrs ${minutes} mins ${seconds} secs<br>
+                    <b>Distance Traveled:</b> ${totalDistance.toFixed(2)} kilometers
+                </div>
+                `;
+                // Display the statistics in the modal
+                let modalStats = document.getElementById('stats-modal');
+                const statsContent = document.getElementById('stats-content');
+                  statsContent.innerHTML = statsText.replace(/\n/g, '<br>'); // Replace newlines with <br> for HTML rendering
 
-                        // Convert time to hh hr:mm min:ss s format
-                        const formattedTime = formatTime(timeTaken);
+                // Show the modal and apply the blur effect
+                modalStats.style.display = 'block';
+                document.body.classList.add('modal-open');
+                document.body.classList.add('blurred');
 
-                        // Display statistics in an alert
-                        alert(
-                            `Distance Travelled: ${distance.toFixed(2)} km\n` +
-                            `Time Taken: ${formattedTime}\n` +
-                            `Start Point: ${startLocation}\n` +
-                            `End Point: ${endLocation}\n` +
-                            `Average Speed: ${averageSpeed.toFixed(2)} km/h`
-                        );
-                    }
-                })
-                .catch(error => console.error('Error fetching location data:', error));
+                isStatsDisplayed = true;
+                console.log(isStatsDisplayed);
+                showStatsButton.disabled = true; // Disable the button after displaying stats
+            });
+        }
 
-        });
+        async function reverseGeocode(lat, lon) {
+            const apiKey = "0c1ca39e470d4fd0b1e723f0bd920ad4";
+            const apiUrl = `https://api.opencagedata.com/geocode/v1/json?key=${apiKey}&q=${lat}+${lon}&pretty=1`;
+
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                // Check if the response contains results
+                if (data.results && data.results.length > 0) {
+                    const placeName = data.results[0].formatted;
+                    return placeName;
+                } else {
+                    return "Unknown Location";
+                }
+            } catch (error) {
+                console.error("Error performing reverse geocoding:", error);
+                return "Error retrieving location";
+            }
+        }
+
+        function calculateDistance(coords1, coords2) {
+            const [lat1, lon1] = coords1;
+            const [lat2, lon2] = coords2;
+
+            const R = 6371; // Earth's radius in kilometers
+            const dLat = (lat2 - lat1) * (Math.PI / 180);
+            const dLon = (lon2 - lon1) * (Math.PI / 180);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c; // Distance in kilometers
+
+            return distance;
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const vehi = params.get('vehicle_id');
+        const date = params.get('date');
+
+        async function updateMap() {
+            try {
+                const response = await fetch('/get_locations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        'vehicle_id': vehi, // Example vehicle ID
+                        'date': date // Example date
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+
+                const jsonData = await response.json();
+                console.log('Received JSON data:', jsonData);
+
+                // Initialize the map with the received JSON data
+                await initMap(jsonData[0]);
+            } catch (error) {
+                console.error('Error fetching JSON data:', error);
+                alert('Error fetching JSON data');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const menuButton = document.getElementById('menu-button');
+            const mapContainer = document.getElementById('map');
+            const modal = document.getElementById('stats-modal');
+            const closeModal = document.getElementById('close-modal');
+            let modalStats = document.getElementById('stats-modal');
+
+            closeModal.addEventListener('click', () => {
+                modalStats.style.display = 'none';
+                document.body.classList.remove('modal-open');
+                isStatsDisplayed = false;
+                console.log(isStatsDisplayed);
+                showStatsButton.disabled = false;
+            });
+            // Function to toggle dark mode for both the map and the website
+            function toggleDarkMode() {
+                mapContainer.classList.toggle("dark-mode");
+                document.body.classList.toggle("dark-mode");
+                modal.classList.toggle("dark-mode");
+                 const body = document.body;
+        let modalStatsX = document.getElementById('stats-modal');
+        const modalContent = document.querySelector('.modal-content');
+
+        body.classList.toggle('dark-mode');
+        modalStatsX.classList.toggle('dark-mode');
+
+        // Check if modal is open and adjust text color
+        if (modalStatsX.style.display === 'block') {
+            const isDarkMode = body.classList.contains('dark-mode');
+            modalContent.style.color = isDarkMode ? '#fff' : '#333';
+        }
+                }
+
+                // Expose the toggleDarkMode function globally for the onclick attribute
+                window.toggleDarkMode = toggleDarkMode;
+
+                mapContainer.style.display = 'block';
+
+                // Initialize the map with the initial data
+                await updateMap();
+
+                // Reload the page every 5 seconds
+        setInterval(() => {
+            location.reload();
+        }, 100000);
+
+                menuButton.addEventListener('click', async () => {
+                    menuButton.style.display = 'none';
+                    mapContainer.style.display = 'block';
+                });
+
+                closeModal.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                });
+            });
     </script>
 </body>
 
