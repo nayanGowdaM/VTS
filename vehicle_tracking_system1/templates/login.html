@@ -14,7 +14,11 @@
         <div class="forms-container">
             <h1 class="header">Vechile Tracking System</h1>
             <div class="signin-signup">
-            
+
+                        <!-- Display error message if it exists -->
+            {% if error %}
+                <div class="error-message">{{ error }}</div>
+            {% endif %}
             <form action="{{url_for('admin_routes.login')}}" class="sign-in-form" method="post">
                 
                 <h2 class="title">Sign In</h2>
