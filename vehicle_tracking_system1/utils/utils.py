@@ -6,3 +6,8 @@ def convert_jsonb_to_list(jsonb_array_data):
     return json_data
 
 
+
+def auth( username, password):
+    if( username=='admin' and password=='admin'):
+        return True
+    return False

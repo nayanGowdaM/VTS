@@ -1,20 +1,44 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, redirect
 from flask import jsonify, request
 import traceback
 import psycopg2
-from utils.utils import convert_jsonb_to_list
+from utils.utils import convert_jsonb_to_list, auth
 
-admin_view = Blueprint('admin_routes', __name__, template_folder='/templates')  
+
+admin_view = Blueprint('admin_routes', __name__, template_folder='../templates')  
 
 @admin_view.route('/')
 def home():
     # return render_template('home.html')
+    return render_template('home.html')
+
+@admin_view.route('/firstpage')
+def firstpage():
+    # return render_template('home.html')
     return render_template('firstpage.html')
 
 
-@admin_view.route('/login', methods=['GET'])
+@admin_view.route('/login', methods=['GET','POST'])
 def login():
-    return render_template('login.html')
+	if request.method == 'POST':
+		_form = request.form
+		username = str(_form["username"])
+		password = str(_form["password"])
+
+		if len(username)<1 or len(password)<1:
+			return render_template('login.html', error="Email and password are required")
+		
+        
+        # d = user_manager.signin(email, hash(password))
+
+		if auth( username, password):
+			return redirect("/firstpage")
+        
+
+		return render_template('login.html', error="Email or password incorrect")
+
+
+	return render_template('login.html')
 
 
 

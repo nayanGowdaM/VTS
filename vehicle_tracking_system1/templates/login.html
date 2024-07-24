@@ -1,11 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <h1>Write Login Page</h1>
-</body>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>SignInPage</title>
+        <link rel="stylesheet" type="text/css" href="../static/styles/style.css" />
+    
+    
+    </head>
+    <body>
+        <div class="container">
+        
+        <div class="forms-container">
+            <h1 class="header">Vechile Tracking System</h1>
+            <div class="signin-signup">
+            
+            <form action="{{url_for('admin_routes.login')}}" class="sign-in-form" method="post">
+                
+                <h2 class="title">Sign In</h2>
+                <div class="input-field">
+                <i class="fas fa-user"></i>
+                <input name="username" type="text" placeholder="Username" />
+                </div>
+                <div class="input-field">
+                <i class="fas fa-lock"></i>
+                <input name="password" type="password" placeholder="Password" />
+                </div>
+                <input type="submit" value="Login" class="btn solid" />
+            </form>
+
+
+            
+            </div>
+        </div>
+        <div class="panels-container">
+
+            <div class="panel left-panel">
+                <div class="content">
+                    <h3>Vechile Tracking System</h3>
+                    <p>Track your vechile from anywhere and anytime</p>
+                    <button class="btn transparent" id="sign-up-btn">Know More</button>
+                    <div id="more-info" style="display: none; margin-top: 20px;">
+                    <p>The Vehicle Tracking System allows you to monitor the location, speed, and status of your vehicles in real-time. Ensure the safety and efficiency of your fleet with our advanced tracking technology.</p>
+                    </div>
+                </div>
+                <img src="./img/GPS.jpg"  id="imgprop" class="image" alt="">
+            </div>
+        </div>
+        
+        </div>
+
+        <script src="./scripts/app.js"></script>
+    </body>
 </html>
