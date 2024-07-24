@@ -1,165 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vehicle Tracking System - ATDXT Map</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: "Arial", sans-serif;
-      background: url("https://images.pexels.com/photos/281260/pexels-photo-281260.jpeg?auto=compress&cs=tinysrgb&w=1600") no-repeat center center fixed;
-      background-size: cover;
-      text-align: center;
-      color: #fff;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SignInPage</title>
+    <link rel="stylesheet" type="text/css" href="../static/styles/style.css" />
+  
+  
+  </head>
+  <body>
+    <div class="container">
+      
+      <div class="forms-container">
+        <h1 class="header">Vechile Tracking System</h1>
+        <div class="signin-signup">
+          
+          <form onsubmit="return submitForm()" class="sign-in-form" method="post">
+            
+            <h2 class="title">Enter Vechile Details</h2>
+            <div class="input-field">
+              <i class="fas fa-user"></i>
+              <label for="vehicle_input">Vehicle:</label>
+              <input type="text" id="vehicle_input" name="vehicle_name" required/>
+            </div>
+            <div class="input-field">
+              <i class="fas fa-lock"></i>
+              <label for="date_input">Date:</label>
+                <input type="date" id="date_input" name="date" required />
 
-    header {
-      padding: 20px;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(0, 0, 0, 0.7);
-    }
+            </div>
+            <input type="submit" value="Submit" class="btn solid" />
+          </form>
 
-    .logo {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      margin-right: 20px;
-    }
+          
+        </div>
+        <p id="errorMessage" class="error-message"></p>
+      </div>
+      <div class="panels-container">
 
-    h1 {
-      flex-grow: 1;
-      text-align: center;
-      margin-right: 20px;
-    }
+        <div class="panel left-panel">
+            <div class="content">
+                <h3>Vechile Tracking System</h3>
+                <p>Track your vechile from anywhere and anytime</p>
+                <button class="btn transparent" id="sign-up-btn">Know More</button>
+                <div id="more-info" style="display: none; margin-top: 20px;">
+                  <p>The Vehicle Tracking System allows you to monitor the location, speed, and status of your vehicles in real-time. Ensure the safety and efficiency of your fleet with our advanced tracking technology.</p>
+                </div>
+            </div>
+            <img src="./img/GPS.jpg"  id="imgprop" class="image" alt="">
+        </div>
+      </div>
+      
+    </div>
 
-    .container {
-      width: 80%;
-      max-width: 400px;
-      margin: 0 auto;
-      background: rgba(255, 255, 255, 0.8);
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-      margin-top: 20px;
-    }
-
-/* <!--    input {-->
-<!--      width: 100%;-->
-<!--      padding: 10px;-->
-<!--      margin-top: 10px;-->
-<!--      box-sizing: border-box;-->
-<!--      margin-bottom: 20px;-->
-<!--      border: 1px solid #ccc;-->
-<!--      border-radius: 5px;-->
-<!--    }--> */
-    label {
-    display: block;
-    margin-top: 10px;
-    color: #333;
-  }
-
-  input[type="text"],
-  input[type="date"] {
-    width: calc(100% - 20px);
-    padding: 10px;
-    margin-top: 5px;
-    box-sizing: border-box;
-    margin-bottom: 15px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    margin-left: 10px;
-    color: #333;
-  }
-
-
-    button {
-      background-color: #333333;
-      color: #fff;
-      padding: 10px 0;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      width: 100%;
-    }
-
-    h2 {
-      margin-bottom: 20px;
-      color: #333;
-    }
-
-    p {
-      margin-top: 20px;
-      color: red;
-    }
-
-    .error-message {
-      color: red;
-      margin-top: 20px;
-    }
-  </style>
-</head>
-
-<body>
-  <header>
-    <h1>Vehicle Tracking System</h1>
-  </header>
-
-  <div class="container">
-    <h2>Enter Vehicle Details</h2>
-    <form id="trackingForm" method="post" onsubmit="return submitForm()">
-      <label for="vehicle_input">Vehicle:</label>
-      <input type="text" id="vehicle_input" name="vehicle_name" required />
-
-      <label for="date_input">Date:</label>
-      <input type="date" id="date_input" name="date" required />
-
-      <button type="submit">Submit</button>
-    </form>
-
-    <p id="errorMessage" class="error-message"></p>
-  </div>
-
-  <script>
-  function submitForm() {
-    // Get values from input fields
-    const vehicleId = document.getElementById('vehicle_input').value;
-    const date = document.getElementById('date_input').value;
-
-    // Reset error message
-    document.getElementById('errorMessage').innerText = '';
-
-    // Fetch location data from Flask backend
-    fetch('/get_locations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        'vehicle_id': vehicleId,
-        'date': date,
-      }),
-    })
-      .then(response => {
-        if (response.ok) {
-          // If successful, open map.html in a new tab
-          window.open(`/map?vehicle_id=${vehicleId}&date=${date}`, '_blank');
-        } else {
-          // If table does not exist, show error message
-          document.getElementById('errorMessage').innerText = 'Table does not exist.';
-        }
-      })
-      .catch(error => {
-        console.error('Error fetching location data:', error);
-        document.getElementById('errorMessage').innerText = 'Error fetching location data.';
-      });
-
-    return false; // Prevent the form from submitting
-  }
-</script>
-</body>
+    <script src="../static/scripts/app.js"></script>
+  </body>
 </html>

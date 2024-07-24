@@ -71,7 +71,7 @@ form.sign-in-form {
   height: 55px;
   border-radius: 55px;
   display: grid;
-  grid-template-columns: 15% 85%;
+  grid-template-columns: 15% 30% 55%; /* Adjusted to include label */
   padding: 0 0.4rem;
   position: relative;
 }
@@ -84,6 +84,13 @@ form.sign-in-form {
   font-size: 1.1rem;
 }
 
+.input-field label {
+  display: flex; /* New: to align label vertically center */
+  align-items: center; /* New: to align label vertically center */
+  margin-left: 10px;
+  color: #333;
+}
+
 .input-field input {
   background: none;
   outline: none;
@@ -92,7 +99,9 @@ form.sign-in-form {
   font-weight: 600;
   font-size: 1.1rem;
   color: #333;
+  padding: 10px;
 }
+
 
 .input-field input::placeholder {
   color: #aaa;
